@@ -5,8 +5,8 @@
 #include <Adafruit_SSD1306.h>
 
 
-const String SSID = "Dudunet";
-const String PSWD = "dudu1234";
+const String SSID = "A55 de Isaque";
+const String PSWD = "12345678";
 
 const String brokerUrl = "test.mosquitto.org";
 const int port = 1883;
@@ -49,6 +49,14 @@ void ConectarWifi(){
   }
 }
 
+void callback(char* topico, byte* payload, unsigned long length){
+  String mensagem = "";
+  for(int i=0; i < length; i++){
+    mensagem += (char) payload[i];
+  }
+  Serial.println(mensagem);
+}
+
 void ConectarBroker(){
   Serial.print("Conectando ao broker");
   mqttClient.setServer(brokerUrl.c_str(),port);
@@ -73,6 +81,9 @@ void ConectarBroker(){
   doc["status_esp2"] = status_esp2;
   serializeJson(doc, message);
 
+
+  mqttClient.subscribe("ProvaPratica/IoT/Sensor");
+  mqttClient.setCallback(callback);
   mqttClient.publish(Topic_LWT,message.c_str(), Retain_LWT);
   Serial.println("\nConectado com Sucesso!");
 }
@@ -103,23 +114,23 @@ void loop() {
   distancia1 = (duracao*(340.29/10000))/2;
 
   digitalWrite(pin_trig2, HIGH);
-  delay(100);
+  delayMicroseconds(100);
   digitalWrite(pin_trig2, LOW);
   duracao = pulseIn(pin_echo2,HIGH);
   distancia2 = (duracao*(340.29/10000))/2;
 
-  if(distancia1 < 50){
+  if(distancia1 < 50 ){
     entrada = true;
     doc["entrada"] = entrada;
     serializeJson(doc,message);
     mqttClient.publish("ProvaPratica/IoT/Sensor",message.c_str());
-  }
-
-  if(distancia2 < 50){
+    delay(2000);
+  } else if(distancia2 < 50){
       entrada = false;
       doc["entrada"] = entrada;
       serializeJson(doc,message);
       mqttClient.publish("ProvaPratica/IoT/Sensor",message.c_str());
+      delay(2000);
   }
 
 
