@@ -3,13 +3,17 @@
 #include <ArduinoJson.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include <WiFiClientSecure.h>
+
 
 
 const String SSID = "A55 de Isaque";
 const String PSWD = "12345678";
 
-const String brokerUrl = "test.mosquitto.org";
-const int port = 1883;
+const char* brokerpass = "Dudu1234";
+const char* brokeruser = "dududamassa2";
+const String brokerUrl = "224a031c7e714f00b6f5367683fd460c.s1.eu.hivemq.cloud";
+const int port = 8883;
 
 const char* Topic_LWT = "ProvaPratica/IoT/Status2";
 const int QoS_LWT = 1;
@@ -27,7 +31,10 @@ int distancia1 = 0;
 int distancia2 = 0;
 bool entrada = false;
 
-WiFiClient espClient;
+unsigned long Temp_init = 0;
+unsigned long Temp_finish = 0;
+
+WiFiClientSecure espClient;
 PubSubClient mqttClient(espClient);
 
 JsonDocument doc;
@@ -67,8 +74,8 @@ void ConectarBroker(){
     doc["status_esp2"] = status_esp2;
     serializeJson(doc,message);
     mqttClient.connect(userId.c_str(),
-                       "", 
-                       "",
+                       brokeruser, 
+                       brokerpass,
                        Topic_LWT, 
                        QoS_LWT, 
                        Retain_LWT, 
@@ -90,6 +97,7 @@ void ConectarBroker(){
 
 void setup() {
   Serial.begin(115200);
+  espClient.setInsecure();
   pinMode(pin_echo1, INPUT);
   pinMode(pin_trig1, OUTPUT);
   pinMode(pin_echo2, INPUT);
@@ -124,13 +132,29 @@ void loop() {
     doc["entrada"] = entrada;
     serializeJson(doc,message);
     mqttClient.publish("ProvaPratica/IoT/Sensor",message.c_str());
-    delay(2000);
+    Temp_init = millis();
+    Temp_finish = millis();
+    while(Temp_init < Temp_finish+2000){
+      mqttClient.loop();
+      if(distancia2 < 50 || distancia1 < 50){
+        Temp_init = millis();
+      }
+    }
   } else if(distancia2 < 50){
       entrada = false;
       doc["entrada"] = entrada;
       serializeJson(doc,message);
       mqttClient.publish("ProvaPratica/IoT/Sensor",message.c_str());
-      delay(2000);
+      Temp_init = millis();
+      Temp_finish = millis();
+      while(Temp_init < Temp_finish+2000 ){
+        mqttClient.loop();
+        if(distancia2 > 50 || distancia1 > 50){
+          Temp_init = millis();
+        }
+      }
+    
+
   }
 
 
