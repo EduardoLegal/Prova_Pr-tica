@@ -7,8 +7,8 @@
 
 
 
-const String SSID = "A55 de Isaque";
-const String PSWD = "12345678";
+const String SSID = "Dudunet";
+const String PSWD = "dudu1234";
 
 const char* brokerpass = "Dudu1234";
 const char* brokeruser = "dududamassa2";
@@ -56,14 +56,6 @@ void ConectarWifi(){
   }
 }
 
-void callback(char* topico, byte* payload, unsigned long length){
-  String mensagem = "";
-  for(int i=0; i < length; i++){
-    mensagem += (char) payload[i];
-  }
-  Serial.println(mensagem);
-}
-
 void ConectarBroker(){
   Serial.print("Conectando ao broker");
   mqttClient.setServer(brokerUrl.c_str(),port);
@@ -88,9 +80,6 @@ void ConectarBroker(){
   doc["status_esp2"] = status_esp2;
   serializeJson(doc, message);
 
-
-  mqttClient.subscribe("ProvaPratica/IoT/Sensor");
-  mqttClient.setCallback(callback);
   mqttClient.publish(Topic_LWT,message.c_str(), Retain_LWT);
   Serial.println("\nConectado com Sucesso!");
 }
@@ -131,28 +120,52 @@ void loop() {
     entrada = true;
     doc["entrada"] = entrada;
     serializeJson(doc,message);
-    mqttClient.publish("ProvaPratica/IoT/Sensor",message.c_str());
     Temp_init = millis();
     Temp_finish = millis();
     while(Temp_init < Temp_finish+2000){
       mqttClient.loop();
-      if(distancia2 < 50 || distancia1 < 50){
+      digitalWrite(pin_trig1, HIGH);
+      delayMicroseconds(100);
+      digitalWrite(pin_trig1, LOW);
+      duracao = pulseIn(pin_echo1,HIGH);
+      distancia1 = (duracao*(340.29/10000))/2;
+
+      digitalWrite(pin_trig2, HIGH);
+      delayMicroseconds(100);
+      digitalWrite(pin_trig2, LOW);
+      duracao = pulseIn(pin_echo2,HIGH);
+      distancia2 = (duracao*(340.29/10000))/2;
+      if(distancia2 > 50 || distancia1 > 50){
         Temp_init = millis();
       }
     }
+    mqttClient.publish("ProvaPratica/IoT/Sensor",message.c_str());
+
   } else if(distancia2 < 50){
       entrada = false;
       doc["entrada"] = entrada;
       serializeJson(doc,message);
-      mqttClient.publish("ProvaPratica/IoT/Sensor",message.c_str());
+
       Temp_init = millis();
       Temp_finish = millis();
       while(Temp_init < Temp_finish+2000 ){
         mqttClient.loop();
+        digitalWrite(pin_trig1, HIGH);
+        delayMicroseconds(100);
+        digitalWrite(pin_trig1, LOW);
+        duracao = pulseIn(pin_echo1,HIGH);
+        distancia1 = (duracao*(340.29/10000))/2;
+
+        digitalWrite(pin_trig2, HIGH);
+        delayMicroseconds(100);
+        digitalWrite(pin_trig2, LOW);
+        duracao = pulseIn(pin_echo2,HIGH);
+        distancia2 = (duracao*(340.29/10000))/2;
         if(distancia2 > 50 || distancia1 > 50){
           Temp_init = millis();
         }
       }
+      mqttClient.publish("ProvaPratica/IoT/Sensor",message.c_str());
     
 
   }
